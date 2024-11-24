@@ -489,6 +489,7 @@ require('lazy').setup({
       { 'mason-org/mason.nvim', opts = {} },
       'mason-org/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
+      'Hoffs/omnisharp-extended-lsp.nvim',
 
       -- Useful status updates for LSP.
       { 'j-hui/fidget.nvim', opts = {} },
@@ -687,6 +688,24 @@ require('lazy').setup({
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
         --
+        omnisharp = {
+          handlers = {
+            ['textDocument/definition'] = require('omnisharp_extended').telescope_lsp_definition,
+            ['textDocument/typeDefinition'] = require('omnisharp_extended').telescope_lsp_type_definition,
+            ['textDocument/references'] = require('omnisharp_extended').telescope_lsp_references,
+            ['textDocument/implementation'] = require('omnisharp_extended').telescope_lsp_implementation,
+          },
+          settings = {
+            FormattingOptions = {
+              EnableEditorConfigSupport = true,
+              OrganizeImports = true,
+            },
+            RoslynExtensionsOptions = {
+              EnableAnalyzersSupport = true,
+              EnableDecompilationSupport = true,
+            },
+          },
+        },
 
         lua_ls = {
           -- cmd = { ... },
