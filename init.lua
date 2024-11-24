@@ -462,6 +462,7 @@ require('lazy').setup({
       { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
+      'Hoffs/omnisharp-extended-lsp.nvim',
 
       -- Useful status updates for LSP.
       -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
@@ -516,7 +517,7 @@ require('lazy').setup({
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
           --  To jump back, press <C-t>.
-          map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          map('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
 
           -- Find references for the word under your cursor.
           map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
@@ -629,6 +630,24 @@ require('lazy').setup({
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
         --
+        omnisharp = {
+          handlers = {
+            ['textDocument/definition'] = require('omnisharp_extended').telescope_lsp_definition,
+            ['textDocument/typeDefinition'] = require('omnisharp_extended').telescope_lsp_type_definition,
+            ['textDocument/references'] = require('omnisharp_extended').telescope_lsp_references,
+            ['textDocument/implementation'] = require('omnisharp_extended').telescope_lsp_implementation,
+          },
+          settings = {
+            FormattingOptions = {
+              EnableEditorConfigSupport = true,
+              OrganizeImports = true,
+            },
+            RoslynExtensionsOptions = {
+              EnableAnalyzersSupport = true,
+              EnableDecompilationSupport = true,
+            },
+          },
+        },
 
         lua_ls = {
           -- cmd = {...},
