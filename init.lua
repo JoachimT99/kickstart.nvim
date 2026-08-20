@@ -539,17 +539,25 @@ do
     callback = function(event)
       local buf = event.buf
 
+      -- omnisharp (C#) needs omnisharp-extended's telescope pickers so that
+      -- references/definitions into decompiled or external symbols resolve
+      -- correctly. Telescope's built-in lsp_* pickers issue their own request
+      -- and bypass the handlers set on the omnisharp config, so we route
+      -- directly to omnisharp_extended for `cs`/`vb` buffers.
+      local is_omnisharp = vim.bo[buf].filetype == 'cs' or vim.bo[buf].filetype == 'vb'
+      local ext = is_omnisharp and require 'omnisharp_extended' or nil
+
       -- Find references for the word under your cursor.
-      vim.keymap.set('n', 'grr', builtin.lsp_references, { buffer = buf, desc = '[G]oto [R]eferences' })
+      vim.keymap.set('n', 'grr', ext and ext.telescope_lsp_references or builtin.lsp_references, { buffer = buf, desc = '[G]oto [R]eferences' })
 
       -- Jump to the implementation of the word under your cursor.
       -- Useful when your language has ways of declaring types without an actual implementation.
-      vim.keymap.set('n', 'gri', builtin.lsp_implementations, { buffer = buf, desc = '[G]oto [I]mplementation' })
+      vim.keymap.set('n', 'gri', ext and ext.telescope_lsp_implementation or builtin.lsp_implementations, { buffer = buf, desc = '[G]oto [I]mplementation' })
 
       -- Jump to the definition of the word under your cursor.
       -- This is where a variable was first declared, or where a function is defined, etc.
       -- To jump back, press <C-t>.
-      vim.keymap.set('n', 'grd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
+      vim.keymap.set('n', 'grd', ext and ext.telescope_lsp_definition or builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
 
       -- Fuzzy find all the symbols in your current document.
       -- Symbols are things like variables, functions, types, etc.
@@ -562,7 +570,7 @@ do
       -- Jump to the type of the word under your cursor.
       -- Useful when you're not sure what type a variable is and you want to see
       -- the definition of its *type*, not where it was *defined*.
-      vim.keymap.set('n', 'grt', builtin.lsp_type_definitions, { buffer = buf, desc = '[G]oto [T]ype Definition' })
+      vim.keymap.set('n', 'grt', ext and ext.telescope_lsp_type_definition or builtin.lsp_type_definitions, { buffer = buf, desc = '[G]oto [T]ype Definition' })
     end,
   })
 
