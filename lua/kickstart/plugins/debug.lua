@@ -23,6 +23,21 @@ return {
 
     -- Add your own debuggers here
     'leoluz/nvim-dap-go',
+    {
+      'mfussenegger/nvim-dap-python',
+      config = function()
+        require('dap-python').setup 'uv'
+      end,
+      keys = {
+        {
+          '<leader>dn',
+          function()
+            require('dap-python').test_method()
+          end,
+          desc = 'Debug python: Function',
+        },
+      },
+    },
   },
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
@@ -72,7 +87,7 @@ return {
     {
       '<F7>',
       function()
-        require('dapui').toggle()
+        require('dapui').toggle { reset = true }
       end,
       desc = 'Debug: See last session result.',
     },
