@@ -539,25 +539,17 @@ do
     callback = function(event)
       local buf = event.buf
 
-      -- omnisharp (C#) needs omnisharp-extended's telescope pickers so that
-      -- references/definitions into decompiled or external symbols resolve
-      -- correctly. Telescope's built-in lsp_* pickers issue their own request
-      -- and bypass the handlers set on the omnisharp config, so we route
-      -- directly to omnisharp_extended for `cs`/`vb` buffers.
-      local is_omnisharp = vim.bo[buf].filetype == 'cs' or vim.bo[buf].filetype == 'vb'
-      local ext = is_omnisharp and require 'omnisharp_extended' or nil
-
       -- Find references for the word under your cursor.
-      vim.keymap.set('n', 'grr', ext and ext.telescope_lsp_references or builtin.lsp_references, { buffer = buf, desc = '[G]oto [R]eferences' })
+      vim.keymap.set('n', 'grr', builtin.lsp_references, { buffer = buf, desc = '[G]oto [R]eferences' })
 
       -- Jump to the implementation of the word under your cursor.
       -- Useful when your language has ways of declaring types without an actual implementation.
-      vim.keymap.set('n', 'gri', ext and ext.telescope_lsp_implementation or builtin.lsp_implementations, { buffer = buf, desc = '[G]oto [I]mplementation' })
+      vim.keymap.set('n', 'gri', builtin.lsp_implementations, { buffer = buf, desc = '[G]oto [I]mplementation' })
 
       -- Jump to the definition of the word under your cursor.
       -- This is where a variable was first declared, or where a function is defined, etc.
       -- To jump back, press <C-t>.
-      vim.keymap.set('n', 'grd', ext and ext.telescope_lsp_definition or builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
+      vim.keymap.set('n', 'grd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
 
       -- Fuzzy find all the symbols in your current document.
       -- Symbols are things like variables, functions, types, etc.
@@ -570,7 +562,7 @@ do
       -- Jump to the type of the word under your cursor.
       -- Useful when you're not sure what type a variable is and you want to see
       -- the definition of its *type*, not where it was *defined*.
-      vim.keymap.set('n', 'grt', ext and ext.telescope_lsp_type_definition or builtin.lsp_type_definitions, { buffer = buf, desc = '[G]oto [T]ype Definition' })
+      vim.keymap.set('n', 'grt', builtin.lsp_type_definitions, { buffer = buf, desc = '[G]oto [T]ype Definition' })
     end,
   })
 
@@ -712,7 +704,11 @@ do
     gh 'mason-org/mason.nvim',
     gh 'mason-org/mason-lspconfig.nvim',
     gh 'WhoIsSethDaniel/mason-tool-installer.nvim',
-    gh 'Hoffs/omnisharp-extended-lsp.nvim',
+    -- C# via the Roslyn language server (replaces omnisharp; supports C# 14).
+    -- The server binary is installed out of band as a dotnet global tool:
+    --   dotnet tool install -g roslyn-language-server --prerelease \
+    --     --source https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json
+    gh 'seblyng/roslyn.nvim',
   }
 
   ---@type table<string, vim.lsp.Config>
@@ -733,25 +729,6 @@ do
         yaml = {
           schemaStore = { enable = true }, -- pulls https://www.schemastore.org/api/json/catalog.json
           validate = true,
-        },
-      },
-    },
-
-    omnisharp = {
-      handlers = {
-        ['textDocument/definition'] = require('omnisharp_extended').telescope_lsp_definition,
-        ['textDocument/typeDefinition'] = require('omnisharp_extended').telescope_lsp_type_definition,
-        ['textDocument/references'] = require('omnisharp_extended').telescope_lsp_references,
-        ['textDocument/implementation'] = require('omnisharp_extended').telescope_lsp_implementation,
-      },
-      settings = {
-        FormattingOptions = {
-          EnableEditorConfigSupport = true,
-          OrganizeImports = true,
-        },
-        RoslynExtensionsOptions = {
-          EnableAnalyzersSupport = true,
-          EnableDecompilationSupport = true,
         },
       },
     },
@@ -817,6 +794,29 @@ do
     vim.lsp.config(name, server)
     vim.lsp.enable(name)
   end
+
+  -- C# via roslyn.nvim. The plugin's own `plugin/roslyn.lua` calls
+  -- `vim.lsp.enable('roslyn')` and wires up the cs/razor filetype handling, so
+  -- here we only set plugin options and server-specific settings. The server
+  -- binary is resolved from PATH (installed as the `roslyn-language-server`
+  -- dotnet global tool).
+  require('roslyn').setup {}
+
+  vim.lsp.config('roslyn', {
+    settings = {
+      ['csharp|inlay_hints'] = {
+        csharp_enable_inlay_hints_for_implicit_object_creation = true,
+        csharp_enable_inlay_hints_for_implicit_variable_types = true,
+      },
+      ['csharp|code_lens'] = {
+        dotnet_enable_references_code_lens = true,
+      },
+      ['csharp|background_analysis'] = {
+        dotnet_analyzer_diagnostics_scope = 'fullSolution',
+        dotnet_compiler_diagnostics_scope = 'fullSolution',
+      },
+    },
+  })
 end
 
 -- ============================================================
