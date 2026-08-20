@@ -684,6 +684,14 @@ require('lazy').setup({
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
         --
+        yamlls = {
+          settings = {
+            yaml = {
+              schemaStore = { enable = true }, -- pulls https://www.schemastore.org/api/json/catalog.json
+              validate = true,
+            },
+          },
+        },
         omnisharp = {
           handlers = {
             ['textDocument/definition'] = require('omnisharp_extended').telescope_lsp_definition,
@@ -737,6 +745,7 @@ require('lazy').setup({
         'stylua', -- Used to format Lua code
         'rust_analyzer',
         'omnisharp',
+        'yamlls',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
