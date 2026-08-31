@@ -14,6 +14,7 @@ vim.pack.add {
   'https://github.com/jay-babu/mason-nvim-dap.nvim',
   'https://github.com/leoluz/nvim-dap-go',
   'https://github.com/mfussenegger/nvim-dap-python',
+  'https://github.com/Cliffback/netcoredbg-macOS-arm64.nvim',
 }
 
 -- Basic debugging keymaps, feel free to change to your liking!
@@ -98,3 +99,7 @@ require('dap-go').setup {
 
 -- Install python specific config
 require('dap-python').setup 'uv'
+
+-- Install C#/.NET specific config (uses the ARM64 macOS build of Samsung's netcoredbg
+-- bundled with the plugin; registers the coreclr/netcoredbg adapters and a `cs` launch config)
+require('netcoredbg-macOS-arm64').setup(require 'dap')
