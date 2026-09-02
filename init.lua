@@ -723,8 +723,22 @@ do
   local servers = {
     -- clangd = {},
     -- gopls = {},
-    -- pyright = {},
     rust_analyzer = {},
+
+    -- Python LSP. basedpyright is a maintained fork of pyright with better
+    -- defaults and inlay hints. Debugging is handled separately by
+    -- nvim-dap-python (see lua/kickstart/plugins/debug.lua).
+    basedpyright = {
+      settings = {
+        basedpyright = {
+          analysis = {
+            typeCheckingMode = 'standard',
+            autoImportCompletions = true,
+            diagnosticMode = 'openFilesOnly',
+          },
+        },
+      },
+    },
     --
     -- Some languages (like typescript) have entire language plugins that can be useful:
     --    https://github.com/pmizio/typescript-tools.nvim
