@@ -731,17 +731,33 @@ do
     --
     -- pyright/basedpyright ignore $VIRTUAL_ENV and default to the first
     -- `python3` on PATH, so project deps look "missing". before_init resolves
-    -- the project interpreter (VIRTUAL_ENV, then a .venv/venv in the workspace
-    -- root) and pins it via python.pythonPath so imports resolve correctly.
+    -- the project interpreter and pins it via python.pythonPath so imports
+    -- resolve correctly. Resolution order:
+    --   1. $VIRTUAL_ENV (e.g. when launched via `uv run nvim`)
+    --   2. nearest .venv/venv found walking UP from the opened file.
+    -- The upward walk matters for monorepos/umbrella repos: root_dir is the
+    -- nearest pyproject.toml (often a nested package like src/platform), while
+    -- the real .venv lives in an ancestor project dir.
     basedpyright = {
       before_init = function(_, config)
         local function py(dir)
+          if not dir then return nil end
           local p = dir .. '/bin/python'
           return vim.uv.fs_stat(p) and p or nil
         end
-        local venv = os.getenv 'VIRTUAL_ENV'
-        local root = config.root_dir
-        local python = (venv and py(venv)) or (root and (py(root .. '/.venv') or py(root .. '/venv')))
+        local python = py(os.getenv 'VIRTUAL_ENV')
+        if not python then
+          local from = config.root_dir
+            or (config.workspace_folders and config.workspace_folders[1] and vim.uri_to_fname(config.workspace_folders[1].uri))
+            or vim.fn.getcwd()
+          for _, name in ipairs { '.venv', 'venv' } do
+            local found = vim.fs.find(name, { path = from, upward = true, type = 'directory' })[1]
+            if found then
+              python = py(found)
+              if python then break end
+            end
+          end
+        end
         if python then
           config.settings = config.settings or {}
           config.settings.python = vim.tbl_deep_extend('force', config.settings.python or {}, { pythonPath = python })
