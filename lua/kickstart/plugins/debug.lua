@@ -6,7 +6,12 @@
 -- be extended to other languages as well. That's why it's called
 -- kickstart.nvim and not kitchen-sink.nvim ;)
 
-vim.pack.add {
+-- The netcoredbg-macOS-arm64.nvim plugin bundles the ARM64 macOS build of
+-- Samsung's netcoredbg, so it only makes sense on Apple Silicon macOS. On every
+-- other platform we install netcoredbg via mason instead (see below).
+local is_macos_arm = vim.fn.has 'mac' == 1 and vim.uv.os_uname().machine == 'arm64'
+
+local dap_plugins = {
   'https://github.com/mfussenegger/nvim-dap',
   'https://github.com/rcarriga/nvim-dap-ui',
   'https://github.com/nvim-neotest/nvim-nio',
@@ -14,8 +19,11 @@ vim.pack.add {
   'https://github.com/jay-babu/mason-nvim-dap.nvim',
   'https://github.com/leoluz/nvim-dap-go',
   'https://github.com/mfussenegger/nvim-dap-python',
-  'https://github.com/Cliffback/netcoredbg-macOS-arm64.nvim',
 }
+if is_macos_arm then
+  table.insert(dap_plugins, 'https://github.com/Cliffback/netcoredbg-macOS-arm64.nvim')
+end
+vim.pack.add(dap_plugins)
 
 -- Basic debugging keymaps, feel free to change to your liking!
 vim.keymap.set('n', '<F5>', function() require('dap').continue() end, { desc = 'Debug: Start/Continue' })
@@ -42,9 +50,14 @@ require('mason-nvim-dap').setup {
 
   -- You'll need to check that you have the required things installed
   -- online, please don't ask me how to install them :)
-  ensure_installed = {
-    -- Update this to ensure that you have the debuggers for the langs you want
-  },
+  ensure_installed = vim.tbl_filter(function(v)
+    return v ~= nil
+  end, {
+    -- Update this to ensure that you have the debuggers for the langs you want.
+    -- On Apple Silicon macOS the netcoredbg-macOS-arm64.nvim plugin provides the
+    -- C#/.NET debugger; everywhere else install netcoredbg through mason.
+    (not is_macos_arm) and 'netcoredbg' or nil,
+  }),
 }
 
 -- Dap UI setup
@@ -90,6 +103,29 @@ dap.listeners.before.event_exited['dapui_config'] = dapui.close
 -- Install python specific config
 require('dap-python').setup 'uv'
 
--- Install C#/.NET specific config (uses the ARM64 macOS build of Samsung's netcoredbg
--- bundled with the plugin; registers the coreclr/netcoredbg adapters and a `cs` launch config)
-require('netcoredbg-macOS-arm64').setup(require 'dap')
+-- Install C#/.NET specific config.
+if is_macos_arm then
+  -- Uses the ARM64 macOS build of Samsung's netcoredbg bundled with the plugin;
+  -- registers the coreclr/netcoredbg adapters and a `cs` launch config.
+  require('netcoredbg-macOS-arm64').setup(require 'dap')
+else
+  -- Elsewhere, wire up the mason-installed netcoredbg (see ensure_installed above).
+  local netcoredbg = vim.fn.exepath 'netcoredbg'
+  if netcoredbg ~= '' then
+    dap.adapters.coreclr = {
+      type = 'executable',
+      command = netcoredbg,
+      args = { '--interpreter=vscode' },
+    }
+    dap.configurations.cs = {
+      {
+        type = 'coreclr',
+        name = 'launch - netcoredbg',
+        request = 'launch',
+        program = function()
+          return vim.fn.input('Path to dll: ', vim.fn.getcwd() .. '/bin/Debug/', 'file')
+        end,
+      },
+    }
+  end
+end
