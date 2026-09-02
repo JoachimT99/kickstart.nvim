@@ -728,7 +728,25 @@ do
     -- Python LSP. basedpyright is a maintained fork of pyright with better
     -- defaults and inlay hints. Debugging is handled separately by
     -- nvim-dap-python (see lua/kickstart/plugins/debug.lua).
+    --
+    -- pyright/basedpyright ignore $VIRTUAL_ENV and default to the first
+    -- `python3` on PATH, so project deps look "missing". before_init resolves
+    -- the project interpreter (VIRTUAL_ENV, then a .venv/venv in the workspace
+    -- root) and pins it via python.pythonPath so imports resolve correctly.
     basedpyright = {
+      before_init = function(_, config)
+        local function py(dir)
+          local p = dir .. '/bin/python'
+          return vim.uv.fs_stat(p) and p or nil
+        end
+        local venv = os.getenv 'VIRTUAL_ENV'
+        local root = config.root_dir
+        local python = (venv and py(venv)) or (root and (py(root .. '/.venv') or py(root .. '/venv')))
+        if python then
+          config.settings = config.settings or {}
+          config.settings.python = vim.tbl_deep_extend('force', config.settings.python or {}, { pythonPath = python })
+        end
+      end,
       settings = {
         basedpyright = {
           analysis = {
